@@ -96,6 +96,7 @@ class PerturbationPlatedPredictor(nn.Module):
             condition_values[var_name] = guide_samples[var_name]
 
         # compute importance weighted ELBO
+        log_likelihood_list = []
         id_list = []
         iwelbo_list = []
         for loader in loaders:
@@ -134,6 +135,7 @@ class PerturbationPlatedPredictor(nn.Module):
                 iwelbo_terms_dict = {}
                 # shape: (n_particles, n_samples)
                 iwelbo_terms_dict["x"] = model_dists["p_x"].log_prob(batch["X"]).sum(-1)
+                log_likelihood_list.append(torch.mean(iwelbo_terms_dict["x"]).item())
                 for var_name in self.local_variables:
                     p = (
                         model_dists[f"p_{var_name}"]
@@ -156,7 +158,6 @@ class PerturbationPlatedPredictor(nn.Module):
                 )
 
                 iwelbo_list.append(batch_iwelbo.detach().cpu().numpy())
-
             idx_curr = np.concatenate(idx_list_curr)
             dataset: PerturbationDataset = loader.dataset
             ids_curr = dataset.convert_idx_to_ids(idx_curr)
@@ -168,7 +169,7 @@ class PerturbationPlatedPredictor(nn.Module):
         iwelbo_df = pd.DataFrame(
             index=ids, columns=["IWELBO"], data=iwelbo.reshape(-1, 1)
         )
-        return iwelbo_df
+        return iwelbo_df, np.mean(np.asarray(log_likelihood_list))
 
     @torch.no_grad()
     def sample_observations(

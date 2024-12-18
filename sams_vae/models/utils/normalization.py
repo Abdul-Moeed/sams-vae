@@ -40,4 +40,5 @@ class LogStandardizationModule(nn.Module):
 
     def forward(self, x):
         logx = torch.log(x + 1)
-        return (logx - self.log_mean) / self.log_scale
+        #return (logx - self.log_mean) / self.log_scale
+        return logx

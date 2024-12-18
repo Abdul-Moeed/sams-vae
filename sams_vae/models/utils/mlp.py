@@ -148,13 +148,19 @@ class BaseLibraryGammaPoissonSharedConcentrationLikelihood(nn.Module):
         normalized_mu = self.normalized_mean_decoder(z)
         mu = library_size * normalized_mu
 
+        # TODO: Fix properly. Hacky fix to get rid of NaNs
+        small_value = 1e-6
+        mu = torch.where(torch.isnan(mu), torch.tensor(small_value), mu)
+
         if multiple_particles:
             mu = mu.reshape(n_particles, n, -1)
 
         concentration = torch.exp(self.log_concentration)
         mu_eps = 1e-4
+        rate = concentration / (mu + mu_eps)
+
         dist = GammaPoisson(
-            concentration=concentration, rate=concentration / (mu + mu_eps)
+            concentration=concentration, rate=rate
         )
         # dist = NegativeBinomial(mu=mu, theta=theta)
         return dist
